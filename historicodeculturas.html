@@ -277,6 +277,7 @@
 
         .main-content {
             flex: 1;
+            min-width: 0;
             padding: 24px 28px;
             display: flex;
             flex-direction: column;
@@ -295,7 +296,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(8, 1fr);
+            grid-template-columns: repeat(8, minmax(0, 1fr));
             gap: 8px;
         }
 
@@ -384,11 +385,13 @@
 
         .charts-grid-2x2 {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 16px;
         }
 
         .chart-box {
+            min-width: 0;
+            max-width: 100%;
             background: #ffffff;
             border: 1px solid var(--card-border);
             border-radius: 8px;
@@ -408,18 +411,25 @@
             position: relative;
             height: 320px;
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
         }
+        .chart-container canvas {
+            max-width: 100%;
+        }
+        .tab-content { min-width: 0; }
 
         @media (max-width: 1400px) {
-            .stats-grid { grid-template-columns: repeat(4, 1fr); }
+            .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
 
         @media (max-width: 1200px) {
-            .charts-grid-2x2 { grid-template-columns: 1fr; }
+            .charts-grid-2x2 { grid-template-columns: minmax(0, 1fr); }
         }
 
         @media (max-width: 768px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         body.is-mobile .sidebar {
