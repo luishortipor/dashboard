@@ -298,6 +298,75 @@
             margin-bottom: 1px;
         }
 
+        /* Atalho para o Histórico de culturas (canto superior direito do cabeçalho) */
+        .header-bar .header-left { min-width: 0; }
+
+        .btn-historico {
+            display: none; /* mobile: só aparece com a barra de filtros aberta */
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-shrink: 0;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            border: 1px solid var(--btn-active-border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1.2;
+            text-decoration: none;
+            text-align: left;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+            transition: background-color 0.2s, transform 0.1s;
+            user-select: none;
+        }
+
+        .btn-historico svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .btn-historico:hover { background-color: var(--btn-active-bg); }
+        .btn-historico:active { transform: translateY(1px); }
+
+        /* Mobile: visível apenas quando a barra lateral está aberta, por cima da sobreposição */
+        .sidebar.open ~ .main-content .btn-historico {
+            display: flex;
+            position: fixed;
+            top: 20px;
+            right: 12px;
+            width: max-content;
+            min-width: min-content; /* nunca mais estreito que a palavra mais longa: o texto fica sempre dentro da caixa */
+            max-width: 108px;
+            padding: 6px 8px;
+            font-size: 0.75rem;
+            text-align: center;
+            z-index: 1001;
+        }
+
+        /* Mobile: sem ícone, para o texto caber ao lado da barra lateral */
+        @media (max-width: 1023.98px) {
+            .sidebar.open ~ .main-content .btn-historico svg { display: none; }
+        }
+
+        /* Desktop: sempre visível, fora do fluxo (não altera a altura do cabeçalho),
+           ancorado a 6px acima da linha separadora */
+        @media (min-width: 1024px) {
+            .header-bar { position: relative; }
+
+            .btn-historico,
+            .sidebar.open ~ .main-content .btn-historico {
+                display: flex;
+                position: absolute;
+                right: 0;
+                bottom: 6px;
+                width: auto;
+                max-width: none;
+                padding: 4px 12px;
+                font-size: 0.8rem;
+                text-align: left;
+                white-space: nowrap;
+                margin: 0;
+            }
+        }
+
         .main-tabs {
             display: flex;
             gap: 12px;
@@ -962,6 +1031,10 @@
                     <h2>Análise de horas e produtividades</h2>
                 </div>
             </div>
+            <a class="btn-historico" href="https://luishortipor.github.io/dashboard/historicodeculturas" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                <span>Histórico de culturas</span>
+            </a>
         </div>
 
         <div class="main-tabs" style="margin-left: 43px;">
