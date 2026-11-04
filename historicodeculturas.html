@@ -294,6 +294,77 @@
             margin-bottom: 12px;
         }
 
+        /* Linha do título com atalho para Horas e produtividades (canto superior direito) */
+        .section-title-row {
+            position: relative;
+            border-bottom: 2px solid #e0d7c8;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        .section-title-row .section-title {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            min-width: 0;
+        }
+
+        .btn-atalho {
+            display: none; /* mobile: só aparece com a barra de filtros aberta */
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-shrink: 0;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            border: 1px solid var(--btn-active-border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1.2;
+            text-decoration: none;
+            text-align: left;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+            transition: background-color 0.2s, transform 0.1s;
+            user-select: none;
+        }
+
+        .btn-atalho svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .btn-atalho:hover { background-color: var(--btn-active-bg); }
+        .btn-atalho:active { transform: translateY(1px); }
+
+        /* Desktop: sempre visível, alinhado na linha do título */
+        /* Fora do fluxo (não altera a altura do cabeçalho), ancorado a 6px acima da linha separadora */
+        body:not(.is-mobile) .btn-atalho {
+            display: flex;
+            position: absolute;
+            right: 0;
+            bottom: 6px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Mobile: visível apenas quando a barra lateral está aberta, por cima da sobreposição */
+        body.is-mobile .sidebar.mobile-open ~ .main-content .btn-atalho {
+            display: flex;
+            position: fixed;
+            top: 16px;
+            right: 12px;
+            width: max-content;
+            min-width: min-content; /* nunca mais estreito que a palavra mais longa: o texto fica sempre dentro da caixa */
+            max-width: 108px;
+            padding: 6px 8px;
+            font-size: 0.75rem;
+            text-align: center;
+            white-space: normal;
+            z-index: 1101;
+        }
+
+        /* Mobile: sem ícone, para o texto caber ao lado da barra lateral */
+        body.is-mobile .sidebar.mobile-open ~ .main-content .btn-atalho svg { display: none; }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -547,7 +618,13 @@
 
     <main class="main-content">
         <section>
-            <h2 class="section-title">Análise do histórico de culturas</h2>
+            <div class="section-title-row">
+                <h2 class="section-title">Análise do histórico de culturas</h2>
+                <a class="btn-atalho" href="https://luishortipor.github.io/dashboard/horaseprodutividades" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                    <span>Horas e produtividades</span>
+                </a>
+            </div>
             <div class="culture-filters" id="culture-filters-bar" style="margin-bottom: 8px;">
                 <input type="text" id="culture-search" placeholder="Filtrar culturas..." oninput="updateDashboard()" style="width: 140px; min-width: unset; flex: unset;">
                 <div class="activity-btns" id="culture-size-btns">
