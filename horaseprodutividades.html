@@ -838,6 +838,25 @@
             cursor: pointer;
         }
 
+        .chart-check-row .culture-sep {
+            font-weight: 400;
+            opacity: 0.6;
+            line-height: 1;
+        }
+
+        .chart-check-row .culture-num-filter {
+            width: 3.6em;
+            padding: 1px 3px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            text-align: center;
+            font: inherit;
+            font-weight: 600;
+            color: inherit;
+            letter-spacing: inherit;
+            background: #fff;
+        }
+
         .chart-header-row .summary-pill .lbl {
             font-size: 0.6rem;
             font-size: clamp(0.55rem, 2.2cqw, 0.65rem);
@@ -1126,6 +1145,15 @@
                     </label>
                     <label>
                         <input type="checkbox" id="chk-emcurso" checked onchange="syncCultureStatusChecks()"> Em curso
+                    </label>
+                    <span class="culture-sep">|</span>
+                    <label>
+                        Mín. kg/m²:
+                        <input type="number" id="numMinKgM2" value="0" min="0" step="0.5" oninput="syncCultureStatusChecks()" class="culture-num-filter">
+                    </label>
+                    <label>
+                        Máx. semanas:
+                        <input type="number" id="numMaxSemanas" value="" placeholder="∞" min="1" oninput="syncCultureStatusChecks()" class="culture-num-filter">
                     </label>
                 </div>
             </div>
@@ -3469,6 +3497,10 @@ const rawTextFilter = document.getElementById('culture-text-filter').value.toLow
 const searchTerms = rawTextFilter.split(/[, \-/#]+/).filter(Boolean);
             const showFinalizadas = document.getElementById('chk-finalizadas').checked;
             const showEmCurso = document.getElementById('chk-emcurso').checked;
+            const elMinKg = document.getElementById('numMinKgM2');
+            const minKgM2 = elMinKg ? (parseFloat(elMinKg.value) || 0) : 0;
+            const elMaxSem = document.getElementById('numMaxSemanas');
+            const maxSemanas = (elMaxSem && elMaxSem.value !== '' && !isNaN(parseInt(elMaxSem.value, 10))) ? parseInt(elMaxSem.value, 10) : null;
 
             return cultureData.filter(item => {
                 if (!selectedFarms.includes(item.Quinta)) return false;
@@ -3490,6 +3522,16 @@ const searchTerms = rawTextFilter.split(/[, \-/#]+/).filter(Boolean);
                     const isAcabada = (item.Fim && item.Fim.trim() !== "");
                     if (isAcabada && !showFinalizadas) return false;
                     if (!isAcabada && !showEmCurso) return false;
+
+                    // Mín. kg/m² e Máx. semanas (só na aba Culturas)
+                    if (minKgM2 > 0) {
+                        const kg = Number(String(item["kg/m²"] ?? '').trim().replace(',', '.'));
+                        if (isNaN(kg) || kg < minKgM2) return false;
+                    }
+                    if (maxSemanas !== null) {
+                        const sem = Math.round(getCultureWeeksDuration(startDateStr, item.Fim));
+                        if (sem > maxSemanas) return false;
+                    }
                 }
 
                 return true;
