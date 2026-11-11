@@ -3856,12 +3856,24 @@ function computeCultureVariations(vals, entries, opts) {
 }
 
 // Intervalos [start..end] de barras por ano (para desenhar separadores e títulos de ano)
-function computeYearGroups(entries) {
+function computeYearGroups(entries, itemValFn, unit) {
     const groups = [];
     entries.forEach((e, i) => {
         const last = groups[groups.length - 1];
         if (last && last.year === e.year) last.end = i;
         else groups.push({ year: e.year, start: i, end: i });
+    });
+    // Média do ano (sobre as culturas individuais desse ano, não sobre as barras)
+    groups.forEach(g => {
+        const vals = [];
+        entries.slice(g.start, g.end + 1).forEach(e => {
+            e.items.forEach(d => {
+                const v = itemValFn(d);
+                if (v !== null && v !== undefined && !isNaN(v)) vals.push(v);
+            });
+        });
+        g.avg = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        g.unit = unit;
     });
     return groups;
 }
@@ -3898,11 +3910,25 @@ const yearGroupsPlugin = {
                 ctx.setLineDash([]);
             }
 
+            const midX = (left + right) / 2;
+            const yearY = Math.max(12, chartArea.top - 56);
+
             ctx.fillStyle = '#1e3316';
             ctx.font = "700 12px 'Inter', sans-serif";
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(String(g.year), (left + right) / 2, Math.max(12, chartArea.top - 42));
+            ctx.fillText(String(g.year), midX, yearY);
+
+            if (g.avg !== null && g.avg !== undefined) {
+                ctx.fillStyle = '#666666';
+                ctx.font = "600 11px 'Inter', sans-serif";
+                // Mesma unidade da "Média" do canto superior direito; se o grupo for
+                // demasiado estreito para o texto, omite a palavra "Média"
+                const valTxt = `${Math.round(g.avg)} ${g.unit}`;
+                const fullTxt = `Média ${valTxt}`;
+                const txt = ctx.measureText(fullTxt).width <= (right - left) ? fullTxt : valTxt;
+                ctx.fillText(txt, midX, yearY + 15);
+            }
         });
         ctx.restore();
     }
@@ -3911,7 +3937,9 @@ const yearGroupsPlugin = {
 // Linhas extra do tooltip para barras agrupadas por quinta
 function groupedTooltipLines(e, opts) {
     const lines = [];
-    if (opts.splitYear) lines.push(`Ano: ${e.year}`);
+    // Ano(s) das culturas que entram na média (um só ano quando está separado por ano)
+    const years = [...new Set(e.items.map(d => getCultureWeekAndYear(d.Inicio || d.Início).year))].sort((a, b) => a - b);
+    lines.push(years.length === 1 ? `Ano: ${years[0]}` : `Anos: ${years.join(', ')}`);
     lines.push(`Nº culturas: ${e.items.length}`);
     lines.push(`Nº Semanas (média): ${e.semanas !== null ? Math.round(e.semanas) : 'Em curso'}`);
     lines.push(`kg/m² (média): ${e.kg !== null ? formatKgM2(e.kg) : 'Sem dados'}`);
@@ -3990,7 +4018,7 @@ function renderCultureHoursChart() {
             categoryPercentage: 0.8, // Largura total reservada para cada barra no gráfico
             barPercentage: 0.8,      // Reduz a largura visível da barra (ajusta entre 0.4 e 0.7 para ser mais estreita)
             animation: { duration: 1000 },
-            layout: { padding: { top: opts.splitYear ? 58 : 35 } },
+            layout: { padding: { top: opts.splitYear ? 76 : 35 } },
             plugins: {
                 legend: {
                     position: 'bottom',
@@ -4079,7 +4107,7 @@ function renderCultureHoursChart() {
 
     // Usado pelo plugin de contorno (precisa de .Quinta por barra) e pelo plugin de anos
     cultureChartInstance._filteredCultureData = entries;
-    cultureChartInstance._yearGroups = opts.splitYear ? computeYearGroups(entries) : null;
+    cultureChartInstance._yearGroups = opts.splitYear ? computeYearGroups(entries, cultureItemTotal, 'h/ha/sem') : null;
 }
 
 ////////////////GRÁFICO DE BARRAS DE H/TON DA ABA "CULTURAS" //////////////////
@@ -4128,7 +4156,7 @@ function updateCultureHTonChart() {
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 1000 },
-            layout: { padding: { top: opts.splitYear ? 58 : 35 } },
+            layout: { padding: { top: opts.splitYear ? 76 : 35 } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -4187,7 +4215,7 @@ function updateCultureHTonChart() {
         plugins: [yearGroupsPlugin]
     });
 
-    cultureHTonChartInstance._yearGroups = opts.splitYear ? computeYearGroups(entries) : null;
+    cultureHTonChartInstance._yearGroups = opts.splitYear ? computeYearGroups(entries, d => Number(d['h/ton']), 'h/ton') : null;
 }
 
         window.onload = function () {

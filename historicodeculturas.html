@@ -646,70 +646,32 @@
 
         <section class="tabs-container">
             <div class="tabs-header">
-                <button class="tab-btn active" onclick="switchTab('tab-quintas-anos', this)">Quintas/Anos</button>
-                <button class="tab-btn" onclick="switchTab('tab-cultura', this)">Culturas</button>
+                <button class="tab-btn active" onclick="switchTab('tab-cultura', this)">Quintas/Anos/Culturas</button>
                 <button class="tab-btn" onclick="switchTab('tab-kgm2ano', this)">kg/m²/ano</button>
             </div>
 
-            <div id="tab-quintas-anos" class="tab-content active">
-                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 12px; padding: 0 4px;">
-                    <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
-                        <input type="checkbox" id="chkSepararPorQuintas" checked onchange="updateDashboard()" style="cursor: pointer; width: 16px; height: 16px;">
-                        Separar por quinta
-                    </label>
-                    <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
-                        <input type="checkbox" id="chkSepararPorAno" onchange="updateDashboard()" style="cursor: pointer; width: 16px; height: 16px;">
-                        Separar por ano
-                    </label>
-                </div>
-                <div class="charts-grid-2x2">
-                    <div class="chart-box"><div class="chart-box-title">kg/m²/sem </div><div class="chart-container"><canvas id="chartQ1"></canvas></div></div>
-                    <div class="chart-box"><div class="chart-box-title">kg/h de trabalho </div><div class="chart-container"><canvas id="chartQ2"></canvas></div></div>
-                    <div class="chart-box">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <div class="chart-box-title" style="margin-bottom:0;">h/ha/sem</div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <label style="font-size: 11px; font-weight: 600; color: #555; display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                        <input type="checkbox" class="chk-h2pl" onchange="syncH2plCheckbox(this)" style="cursor: pointer; width: 13px; height: 13px; margin: 0;">
-                        Ajustar a 2pl/m²
-                    </label>
-                    <span style="font-size: 11px; font-weight: 400; color: #555; opacity: 0.6; line-height: 1;">|</span>
-                    <label style="font-size: 11px; font-weight: 600; color: #555; display: flex; align-items: center; gap: 4px;">
-                    Mín. kg/m²:
-                    <input type="number" class="flt-min-kg" value="0" min="0" step="0.5" oninput="syncFilterInputs('flt-min-kg', this)" style="width: 48px; padding: 1px 3px; border: 1px solid #ccc; border-radius: 3px; text-align: center; font-weight: bold; font-size: 11px;">
-                </label>
-                </div>
-            </div>
-            <div class="chart-container"><canvas id="chartQ3"></canvas></div></div>
-                    <div class="chart-box">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <div class="chart-box-title" style="margin-bottom:0;">kg/m²/cultura</div>
-                <label style="font-size: 11px; font-weight: 600; color: #555; display: flex; align-items: center; gap: 4px;">
-                    Máx. semanas:
-                    <input type="number" class="flt-max-sem" value="" placeholder="∞" min="1" oninput="syncFilterInputs('flt-max-sem', this)" style="width: 48px; padding: 1px 3px; border: 1px solid #ccc; border-radius: 3px; text-align: center; font-weight: bold; font-size: 11px;">
-                </label>
-            </div>
-            <div class="chart-container"><canvas id="chartQ4"></canvas></div></div>
-                </div>
-            </div>
-
-
-<div id="tab-cultura" class="tab-content">
+<div id="tab-cultura" class="tab-content active">
     <!-- Checkboxes Globais da Aba -->
-    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 12px; padding: 0 4px;">
+    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 12px; padding: 0 4px; flex-wrap: wrap;">
         <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
-            <input type="checkbox" id="chkTop10Culturas" checked onchange="handleTop10CulturasChange()" style="cursor: pointer; width: 16px; height: 16px;">
+            <input type="checkbox" id="chkSepararPorQuintas" checked onchange="updateDashboard()" style="cursor: pointer; width: 16px; height: 16px;">
+            Separar por quinta
+        </label>
+        <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
+            <input type="checkbox" id="chkSepararPorAno" onchange="updateDashboard()" style="cursor: pointer; width: 16px; height: 16px;">
+            Separar por ano
+        </label>
+        <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
+            <input type="checkbox" id="chkSepararPorCultura" onchange="updateDashboard()" style="cursor: pointer; width: 16px; height: 16px;">
+            Separar por cultura
+        </label>
+        <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
+            <input type="checkbox" id="chkTop10Culturas" checked onchange="updateDashboard()" style="cursor: pointer; width: 16px; height: 16px;">
             Top 10
         </label>
-
         <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
-            <input type="checkbox" id="chkInvertCulturas" onchange="handleTop10CulturasChange()" style="cursor: pointer; width: 16px; height: 16px;">
-            Inverter Ordem
-        </label>
-
-        <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
-            <input type="checkbox" id="chkSepAnosCulturas" onchange="handleTop10CulturasChange()" style="cursor: pointer; width: 16px; height: 16px;">
-            Separar por ano
+            <input type="checkbox" id="chkInvertCulturas" onchange="updateDashboard()" style="cursor: pointer; width: 16px; height: 16px;">
+            Inverter ordem
         </label>
     </div>
 
@@ -1185,7 +1147,7 @@ let rawData = rawDataDefault;
         let selectedYears = [];
         let selectedTypes = [];
         let selectedFarms = Object.keys(farmColors);
-        let activeTabId = 'tab-quintas-anos';
+        let activeTabId = 'tab-cultura';
         let chartInstances = {};
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -1415,10 +1377,7 @@ let rawData = rawDataDefault;
     // Passa os dados e os valores dos filtros para a função de estatísticas
     updateStats(data, minKgM2, maxSemanasVal);
     
-    if (activeTabId === 'tab-quintas-anos') {
-        updateTabAnosUsingQCharts(data);
-    }
-    if (activeTabId === 'tab-cultura') updateTabCulturas(data);
+    if (activeTabId === 'tab-cultura') updateTabQuintasAnosCulturas(data);
     if (activeTabId === 'tab-kgm2ano') updateTabKgM2Ano();
 }
 
@@ -1579,7 +1538,7 @@ function fmtKgTooltip(v) {
     return (v === null || v === undefined || String(v).trim() === '' || isNaN(n)) ? v : n.toFixed(2).replace('.', ',');
 }
 
-function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = false, weeksVals = null, inicioVals = null, xTickFontSize = 12, yearsArr = null) {
+function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = false, weeksVals = null, inicioVals = null, xTickFontSize = 12, yearsArr = null, metaVals = null) {
     if(chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
     let fullUnit = '';
@@ -1666,6 +1625,11 @@ function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = fals
                     if (fullUnit.includes('kg/m²')) value = fmtKgTooltip(value);
                     else value = fmtPT(value);
                     let mainText = ` ${value}${fullUnit}`;
+
+                    // Barras agregadas: ano(s), nº de culturas e nº médio de semanas que entram no cálculo
+                    if (metaVals && metaVals[context.dataIndex]) {
+                        return [mainText, ...aggMetaLines(metaVals[context.dataIndex])];
+                    }
                     
                     if (isCulturasTab) {
                         const idx = context.dataIndex;
@@ -1868,6 +1832,29 @@ function getHhaKey() {
 //////////////GRÁFICO DAS QUINTAS///////////////
 
 
+// Metadados de uma barra agregada: ano(s), nº de culturas e nº médio de semanas
+// das culturas que entram no cálculo da média dessa barra
+function buildAggMeta(items) {
+    if (!items || items.length === 0) return null;
+    const sems = items.map(calcSemanasCultura);
+    return {
+        n: items.length,
+        semanas: sems.reduce((a, b) => a + b, 0) / sems.length,
+        years: [...new Set(items.map(d => Math.floor(d.ano)).filter(y => !isNaN(y)))].sort((a, b) => a - b)
+    };
+}
+
+function aggMetaLines(m) {
+    if (!m) return [];
+    const lines = [];
+    if (m.years && m.years.length) {
+        lines.push(m.years.length === 1 ? ` Ano: ${m.years[0]}` : ` Anos: ${m.years.join(', ')}`);
+    }
+    lines.push(` Nº culturas: ${m.n}`);
+    lines.push(` Nº semanas (média): ${Math.round(m.semanas)}`);
+    return lines;
+}
+
 function updateTabAnosUsingQCharts(data) {
     const years = getActiveYears().sort((a,b) => a - b);
     const separarPorAno = document.getElementById('chkSepararPorAno')?.checked || false;
@@ -1882,38 +1869,40 @@ function updateTabAnosUsingQCharts(data) {
             // Separado por ano + Quintas agrupadas (várias cores por ano)
             const farms = Object.keys(farmColors).filter(f => selectedFarms.includes(f));
             const buildSeries = (key, roundToUnit = false, src = data) => {
-                return farms.map(f => ({
-                    farm: f,
-                    vals: years.map(yr => {
-                        const yData = src.filter(d => d.quinta === f && d.ano === yr && d[key] > 0);
-                        if (!yData.length) return 0;
-                        const avg = yData.reduce((a, b) => a + b[key], 0) / yData.length;
-                        return roundToUnit ? Math.round(avg) : +avg.toFixed(2);
-                    })
-                })).filter(s => s.vals.some(v => v > 0));
+                return farms.map(f => {
+                    const groups = years.map(yr => src.filter(d => d.quinta === f && d.ano === yr && d[key] > 0));
+                    return {
+                        farm: f,
+                        vals: groups.map(yData => {
+                            if (!yData.length) return 0;
+                            const avg = yData.reduce((a, b) => a + b[key], 0) / yData.length;
+                            return roundToUnit ? Math.round(avg) : +avg.toFixed(2);
+                        }),
+                        meta: groups.map(buildAggMeta)
+                    };
+                }).filter(s => s.vals.some(v => v > 0));
             };
 
-            renderGroupedBarChart('chartQ1', years, buildSeries('kg_m2_sem'));
-            renderGroupedBarChart('chartQ2', years, buildSeries('kg_h'));
-            renderGroupedBarChart('chartQ3', years, buildSeries(getHhaKey(), true, dataMinKg), true);
-            renderGroupedBarChart('chartQ4', years, buildSeries('kg_m2_totais', false, dataP4));
+            renderGroupedBarChart('chartC1', years, buildSeries('kg_m2_sem'));
+            renderGroupedBarChart('chartC2', years, buildSeries('kg_h'));
+            renderGroupedBarChart('chartC3', years, buildSeries(getHhaKey(), true, dataMinKg), true);
+            renderGroupedBarChart('chartC4', years, buildSeries('kg_m2_totais', false, dataP4));
         } else {
             // Separado por ano + Quintas NÃO agrupadas (1 barra média por ano)
             let yearBarColor = selectedFarms.length === 1 ? farmColors[selectedFarms[0]] : '#75b35c';
-            const calcYearAvg = (key, roundToUnit = false, src = data) => years.map(yr => {
-                const yData = src.filter(d => d.ano === yr && d[key] > 0);
+            const yearGroups = (key, src) => years.map(yr => src.filter(d => d.ano === yr && d[key] > 0));
+            const calcYearAvg = (key, roundToUnit = false, src = data) => yearGroups(key, src).map(yData => {
                 if (!yData.length) return 0;
                 const avg = yData.reduce((a,b)=>a+b[key],0) / yData.length;
                 return roundToUnit ? Math.round(avg) : +avg.toFixed(2);
             });
+            const yearMeta = (key, src) => yearGroups(key, src).map(buildAggMeta);
 
-            renderBarChart('chartQ1', years, calcYearAvg('kg_m2_sem'), yearBarColor);
-            renderBarChart('chartQ2', years, calcYearAvg('kg_h'), yearBarColor);
-            renderBarChart('chartQ3', years, calcYearAvg(getHhaKey(), true, dataMinKg), yearBarColor, true);
-            renderBarChart('chartQ4', years, years.map(yr => {
-                const yData = dataP4.filter(d => d.ano === yr && d.kg_m2_totais > 0);
-                return yData.length ? +(yData.reduce((a, b) => a + b.kg_m2_totais, 0) / yData.length).toFixed(2) : 0;
-            }), yearBarColor);
+            const hhaKey = getHhaKey();
+            renderBarChart('chartC1', years, calcYearAvg('kg_m2_sem'), yearBarColor, false, null, null, 12, null, yearMeta('kg_m2_sem', data));
+            renderBarChart('chartC2', years, calcYearAvg('kg_h'), yearBarColor, false, null, null, 12, null, yearMeta('kg_h', data));
+            renderBarChart('chartC3', years, calcYearAvg(hhaKey, true, dataMinKg), yearBarColor, true, null, null, 12, null, yearMeta(hhaKey, dataMinKg));
+            renderBarChart('chartC4', years, calcYearAvg('kg_m2_totais', false, dataP4), yearBarColor, false, null, null, 12, null, yearMeta('kg_m2_totais', dataP4));
         }
         return;
     }
@@ -1925,22 +1914,20 @@ function updateTabAnosUsingQCharts(data) {
     } else {
         // Não separado por ano + Quintas NÃO agrupadas (média global de todas as quintas num único valor/barra)
         let globalBarColor = '#75b35c';
+        const validOf = (key, src) => src.filter(d => d[key] > 0);
         const calcGlobalAvg = (key, roundToUnit = false, src = data) => {
-            const valid = src.filter(d => d[key] > 0);
+            const valid = validOf(key, src);
             if (!valid.length) return 0;
             const avg = valid.reduce((a,b) => a + b[key], 0) / valid.length;
             return roundToUnit ? Math.round(avg) : +avg.toFixed(2);
         };
-        const globalTotalAvg = (src) => {
-            const valid = src.filter(d => d.kg_m2_totais > 0);
-            if (!valid.length) return 0;
-            return +(valid.reduce((a,b) => a + b.kg_m2_totais, 0) / valid.length).toFixed(2);
-        };
+        const globalMeta = (key, src) => [buildAggMeta(validOf(key, src))];
 
-        renderBarChart('chartQ1', ['Média Geral'], [calcGlobalAvg('kg_m2_sem', false, data)], globalBarColor);
-        renderBarChart('chartQ2', ['Média Geral'], [calcGlobalAvg('kg_h', true, data)], globalBarColor);
-        renderBarChart('chartQ3', ['Média Geral'], [calcGlobalAvg(getHhaKey(), true, dataMinKg)], globalBarColor, true);
-        renderBarChart('chartQ4', ['Média Geral'], [globalTotalAvg(dataP4)], globalBarColor);
+        const hhaKey = getHhaKey();
+        renderBarChart('chartC1', ['Média Geral'], [calcGlobalAvg('kg_m2_sem', false, data)], globalBarColor, false, null, null, 12, null, globalMeta('kg_m2_sem', data));
+        renderBarChart('chartC2', ['Média Geral'], [calcGlobalAvg('kg_h', true, data)], globalBarColor, false, null, null, 12, null, globalMeta('kg_h', data));
+        renderBarChart('chartC3', ['Média Geral'], [calcGlobalAvg(hhaKey, true, dataMinKg)], globalBarColor, true, null, null, 12, null, globalMeta(hhaKey, dataMinKg));
+        renderBarChart('chartC4', ['Média Geral'], [calcGlobalAvg('kg_m2_totais', false, dataP4)], globalBarColor, false, null, null, 12, null, globalMeta('kg_m2_totais', dataP4));
     }
 }
 
@@ -1951,34 +1938,21 @@ function updateTabQuintas(data) {
             const fData = src.filter(d => d.quinta === f && d[key] > 0);
             if(fData.length) {
                 const avg = fData.reduce((a,b) => a + b[key], 0) / fData.length;
-                stats.push({ farm: f, avg: roundToUnit ? Math.round(avg) : +avg.toFixed(2) });
+                stats.push({ farm: f, avg: roundToUnit ? Math.round(avg) : +avg.toFixed(2), meta: buildAggMeta(fData) });
             }
         });
         stats.sort((a,b) => lowerIsBetter ? a.avg - b.avg : b.avg - a.avg);
         return stats;
     };
 
-    const q1 = calcFarmAvg('kg_m2_sem', false);
-    renderBarChart('chartQ1', q1.map(d => farmAbbreviations[d.farm] || d.farm), q1.map(d=>d.avg), q1.map(d=>farmColors[d.farm]), false, null, null);
+    const draw = (canvasId, stats, lowerIsBetter) => {
+        renderBarChart(canvasId, stats.map(d => farmAbbreviations[d.farm] || d.farm), stats.map(d => d.avg), stats.map(d => farmColors[d.farm]), lowerIsBetter, null, null, 12, null, stats.map(d => d.meta));
+    };
 
-    const q2 = calcFarmAvg('kg_h', false, true);
-    renderBarChart('chartQ2', q2.map(d => farmAbbreviations[d.farm] || d.farm), q2.map(d=>d.avg), q2.map(d=>farmColors[d.farm]), false, null, null);
-
-    const q3 = calcFarmAvg(getHhaKey(), true, true, filterByMinKgM2(data));
-    renderBarChart('chartQ3', q3.map(d => farmAbbreviations[d.farm] || d.farm), q3.map(d=>d.avg), q3.map(d=>farmColors[d.farm]), true, null, null);
-
-    const dataQ4 = filterByMaxSemanas(data);
-    let q4Stats = [];
-    Object.keys(farmColors).forEach(f => {
-        const fData = dataQ4.filter(d => d.quinta === f && d.kg_m2_totais > 0);
-        if(fData.length) {
-            const avgTotal = fData.reduce((a,b) => a + b.kg_m2_totais, 0) / fData.length;
-            const abbr = farmAbbreviations[f] || f;
-            q4Stats.push({ farmLabel: abbr, avg: +avgTotal.toFixed(2), farm: f });
-        }
-    });
-    q4Stats.sort((a,b) => b.avg - a.avg);
-    renderBarChart('chartQ4', q4Stats.map(d => d.farmLabel), q4Stats.map(d => d.avg), q4Stats.map(d => farmColors[d.farm]), false, null, null);
+    draw('chartC1', calcFarmAvg('kg_m2_sem', false), false);
+    draw('chartC2', calcFarmAvg('kg_h', false, true), false);
+    draw('chartC3', calcFarmAvg(getHhaKey(), true, true, filterByMinKgM2(data)), true);
+    draw('chartC4', calcFarmAvg('kg_m2_totais', false, false, filterByMaxSemanas(data)), false);
 }
 
 //////////////GRÁFICO DOS ANOS///////////////
@@ -2073,7 +2047,8 @@ function renderGroupedBarChart(canvasId, labels, farmSeries, lowerIsBetter = fal
                             value = fullUnit.includes('kg/m²') ? fmtKgTooltip(value) : fmtPT(value);
                             const f = farmAt(context.datasetIndex, context.dataIndex);
                             const farmName = f >= 0 ? (farmAbbreviations[farmSeries[f].farm] || farmSeries[f].farm) : '';
-                            return ` ${farmName}: ${value}${fullUnit}`;
+                            const meta = (f >= 0 && farmSeries[f].meta) ? farmSeries[f].meta[context.dataIndex] : null;
+                            return [` ${farmName}: ${value}${fullUnit}`, ...aggMetaLines(meta)];
                         }
                     }
                 },
@@ -2103,27 +2078,43 @@ function renderGroupedBarChart(canvasId, labels, farmSeries, lowerIsBetter = fal
 
 
 
-function handleTop10CulturasChange() {
-    let dataToUse = null;
-    if (typeof lastFilteredData !== 'undefined' && Array.isArray(lastFilteredData) && lastFilteredData.length > 0) {
-        dataToUse = lastFilteredData;
+//////////////ABA QUINTAS/ANOS/CULTURAS///////////////
+
+// Aba unida: 4 gráficos (chartC1..C4) cujo conteúdo depende dos checkboxes.
+// - "Separar por cultura" desligado: vista por quinta/ano (Separar por quinta × Separar por ano)
+// - "Separar por cultura" ligado: 1 barra por cultura (Top 10 / Inverter ordem / Separar por ano)
+function updateTabQuintasAnosCulturas(data) {
+    const sepCultura = document.getElementById('chkSepararPorCultura')?.checked || false;
+
+    // Opções que não se aplicam ao modo atual ficam esbatidas e bloqueadas (mantêm o estado)
+    const setEnabled = (id, enabled) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = !enabled;
+        el.style.cursor = enabled ? 'pointer' : 'not-allowed';
+        const lb = el.closest('label');
+        if (lb) {
+            lb.style.opacity = enabled ? '1' : '0.45';
+            lb.style.cursor = enabled ? 'pointer' : 'not-allowed';
+        }
+    };
+    setEnabled('chkSepararPorQuintas', !sepCultura);
+    setEnabled('chkTop10Culturas', sepCultura);
+    setEnabled('chkInvertCulturas', sepCultura);
+
+    if (sepCultura) {
+        updateTabCulturas(data);
+        return;
     }
 
-    const chk = document.getElementById('chkTop10Culturas');
-    const isTop10 = chk ? chk.checked : true;
-    const prefix = isTop10 ? 'Top 10' : 'Todas as Culturas';
-    
     const titles = document.querySelectorAll('#tab-cultura .chart-box-title');
     if (titles.length >= 4) {
-        titles[0].textContent = `${prefix} kg/m²/sem`;
-        titles[1].textContent = `${prefix} kg/h de trabalho`;
-        titles[2].textContent = `${prefix} h/ha/sem`;
-        titles[3].textContent = `${prefix} kg/m²/cultura`;
+        titles[0].textContent = 'kg/m²/sem';
+        titles[1].textContent = 'kg/h de trabalho';
+        titles[2].textContent = 'h/ha/sem';
+        titles[3].textContent = 'kg/m²/cultura';
     }
-
-    if (dataToUse) {
-        updateTabCulturas(dataToUse);
-    }
+    updateTabAnosUsingQCharts(data);
 }
 
 //////////////GRÁFICO DAS CULTURAS///////////////
@@ -2145,7 +2136,7 @@ function updateTabCulturas(data) {
 
     const isTop10 = chkTop10 ? chkTop10.checked : true;
     const isInverted = chkInvert ? chkInvert.checked : false;
-    const chkSepAnos = document.getElementById('chkSepAnosCulturas');
+    const chkSepAnos = document.getElementById('chkSepararPorAno');
     const isSepAnos = chkSepAnos ? chkSepAnos.checked : false;
 
     const orderPrefix = isInverted ? '' : 'Top 10 -';
