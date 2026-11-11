@@ -1169,6 +1169,12 @@
                     <div class="chart-header-controls">
                         <!-- Resumo das Médias Horas/Semana (Posicionado na direita) -->
                         <div id="culture-summary-container" class="summary-pills-container" style="justify-content: flex-end;"></div>
+                        <label class="hha-bar-toggle">
+                            <input type="checkbox" id="chk-cult-agrupar" onchange="renderCultureHoursChart()"> Agrupar por quinta
+                        </label>
+                        <label class="hha-bar-toggle">
+                            <input type="checkbox" id="chk-cult-anos" onchange="renderCultureHoursChart()"> Separar por ano
+                        </label>
                     </div>
                 </div>
 
@@ -1187,6 +1193,12 @@
                     <div class="chart-header-controls">
                         <!-- Resumo das Médias Horas/Tonelada (Posicionado na direita) -->
                         <div id="culture-hton-summary-container" class="summary-pills-container" style="justify-content: flex-end;"></div>
+                        <label class="hha-bar-toggle">
+                            <input type="checkbox" id="chk-hton-agrupar" onchange="updateCultureHTonChart()"> Agrupar por quinta
+                        </label>
+                        <label class="hha-bar-toggle">
+                            <input type="checkbox" id="chk-hton-anos" onchange="updateCultureHTonChart()"> Separar por ano
+                        </label>
                     </div>
                 </div>
 
@@ -3748,59 +3760,193 @@ const stackedBarOutlinePlugin = {
     }
 };
 
-////////////////GRÁFICO DE BARRAS DE H/HA DA ABA "CULTURAS" //////////////////
+////////////////HELPERS: "AGRUPAR POR QUINTA" / "SEPARAR POR ANO" (ABA "CULTURAS") //////////////////
 
+// Lê o estado dos 2 checkboxes de um gráfico ('cult' = h/ha/sem, 'hton' = h/ton)
+function getCultureViewOpts(prefix) {
+    const g = document.getElementById(`chk-${prefix}-agrupar`);
+    const y = document.getElementById(`chk-${prefix}-anos`);
+    return { groupFarm: !!(g && g.checked), splitYear: !!(y && y.checked) };
+}
+
+function cultureItemTotal(d) {
+    return (d['Horas Plantas'] || 0) + (d['Horas Colheita'] || 0) + (d['Horas Outros'] || 0) + (d['Horas Limp/Prep'] || 0);
+}
+
+// Transforma as culturas filtradas em "barras".
+// - Sem agrupar: 1 barra por cultura.
+// - Agrupar por quinta: 1 barra por quinta (média de cada categoria, mantendo a divisão
+//   plantas/colheita/outros/limp-prep). Com "Separar por ano" ativo: 1 barra por quinta e ano.
+function buildCultureEntries(items, opts) {
+    const groups = new Map();
+    items.forEach((d, i) => {
+        const year = getCultureWeekAndYear(d.Inicio || d.Início).year;
+        const key = opts.groupFarm ? `${d.Quinta}|${opts.splitYear ? year : 'all'}` : `item${i}`;
+        if (!groups.has(key)) groups.set(key, { Quinta: d.Quinta, year: year, items: [] });
+        groups.get(key).items.push(d);
+    });
+
+    return [...groups.values()].map(g => {
+        const n = g.items.length;
+        const avg = k => g.items.reduce((acc, d) => acc + (d[k] || 0), 0) / n;
+
+        const htons = g.items.map(d => d['h/ton']).filter(v => v !== null && v !== undefined && v !== '' && !isNaN(v)).map(Number);
+        const kgs = g.items.map(d => {
+            const raw = String(d['kg/m²'] ?? '').trim().replace(',', '.');
+            return raw === '' ? NaN : Number(raw);
+        }).filter(v => !isNaN(v));
+        const sems = g.items
+            .filter(d => d.Fim && String(d.Fim).trim() !== '')
+            .map(d => getCultureWeeksDuration(d.Inicio || d.Início, d.Fim));
+
+        const mean = arr => arr.length > 0 ? arr.reduce((x, y) => x + y, 0) / arr.length : null;
+
+        const plantas = avg('Horas Plantas');
+        const colheita = avg('Horas Colheita');
+        const outros = avg('Horas Outros');
+        const limp = avg('Horas Limp/Prep');
+
+        return {
+            Quinta: g.Quinta,
+            year: g.year,
+            items: g.items,
+            grouped: opts.groupFarm,
+            plantas, colheita, outros, limp,
+            total: plantas + colheita + outros + limp,
+            hton: mean(htons),
+            kg: mean(kgs),
+            semanas: mean(sems)
+        };
+    });
+}
+
+// Ordena do melhor (menor valor) para o pior; com "Separar por ano": anos do mais antigo
+// para o mais recente e, dentro de cada ano, do melhor para o pior.
+function sortCultureEntries(entries, opts, valFn) {
+    entries.sort((a, b) => {
+        if (opts.splitYear && a.year !== b.year) return a.year - b.year;
+        return valFn(a) - valFn(b);
+    });
+}
+
+function cultureEntryLabel(e) {
+    const abbr = farmAbbreviations[e.Quinta] || e.Quinta;
+    if (e.grouped) return abbr;
+    const yy = e.year.toString().slice(-2);
+    return `${abbr}-${e.items[0].Cultura} (${yy})`;
+}
+
+// "(Melhor)" e % face ao melhor. Com "Separar por ano" o melhor é calculado dentro de cada ano.
+function computeCultureVariations(vals, entries, opts) {
+    const keyOf = i => opts.splitYear ? entries[i].year : 'all';
+    const best = {}, count = {};
+    vals.forEach((v, i) => {
+        const k = keyOf(i);
+        count[k] = (count[k] || 0) + 1;
+        if (best[k] === undefined || v < best[k]) best[k] = v;
+    });
+    return vals.map((v, i) => {
+        const k = keyOf(i);
+        if (count[k] <= 1) return { text: '', isBest: false };
+        if (v === best[k]) return { text: '(Melhor)', isBest: true };
+        if (!(best[k] > 0)) return { text: '', isBest: false };
+        const diffPct = ((v - best[k]) / best[k]) * 100;
+        return { text: `${diffPct > 0 ? '+' : ''}${diffPct.toFixed(0)}%`, isBest: false };
+    });
+}
+
+// Intervalos [start..end] de barras por ano (para desenhar separadores e títulos de ano)
+function computeYearGroups(entries) {
+    const groups = [];
+    entries.forEach((e, i) => {
+        const last = groups[groups.length - 1];
+        if (last && last.year === e.year) last.end = i;
+        else groups.push({ year: e.year, start: i, end: i });
+    });
+    return groups;
+}
+
+// Linhas tracejadas entre anos + título do ano por cima de cada grupo
+const yearGroupsPlugin = {
+    id: 'yearGroups',
+    beforeDatasetsDraw(chart) {
+        const groups = chart._yearGroups;
+        if (!groups || groups.length === 0) return;
+        const meta = chart.getDatasetMeta(0);
+        const { ctx, chartArea, scales } = chart;
+        const nLabels = chart.data.labels.length;
+        const catW = nLabels > 1
+            ? Math.abs(scales.x.getPixelForValue(1) - scales.x.getPixelForValue(0))
+            : chartArea.width;
+
+        ctx.save();
+        groups.forEach((g, gi) => {
+            const first = meta.data[g.start];
+            const last = meta.data[g.end];
+            if (!first || !last) return;
+            const left = first.x - catW / 2;
+            const right = last.x + catW / 2;
+
+            if (gi > 0) {
+                ctx.beginPath();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = '#cfc8b8';
+                ctx.lineWidth = 1;
+                ctx.moveTo(left, 4);
+                ctx.lineTo(left, chartArea.bottom);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            ctx.fillStyle = '#1e3316';
+            ctx.font = "700 12px 'Inter', sans-serif";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(g.year), (left + right) / 2, Math.max(12, chartArea.top - 42));
+        });
+        ctx.restore();
+    }
+};
+
+// Linhas extra do tooltip para barras agrupadas por quinta
+function groupedTooltipLines(e, opts) {
+    const lines = [];
+    if (opts.splitYear) lines.push(`Ano: ${e.year}`);
+    lines.push(`Nº culturas: ${e.items.length}`);
+    lines.push(`Nº Semanas (média): ${e.semanas !== null ? Math.round(e.semanas) : 'Em curso'}`);
+    lines.push(`kg/m² (média): ${e.kg !== null ? formatKgM2(e.kg) : 'Sem dados'}`);
+    return lines;
+}
+
+////////////////GRÁFICO DE BARRAS DE H/HA DA ABA "CULTURAS" //////////////////
 
 function updateCultureChart() {
     renderCultureFarmCards();
+    renderCultureHoursChart();
+    updateCultureHTonChart();
+}
 
+function renderCultureHoursChart() {
     const ctx = document.getElementById('cultureChart').getContext('2d');
     if (cultureChartInstance) cultureChartInstance.destroy();
 
-    let filtered = getFilteredCultureData(false);
+    const opts = getCultureViewOpts('cult');
+    const filteredItems = getFilteredCultureData(false);
 
-    filtered.sort((a, b) => {
-        const totalA = (a['Horas Plantas'] || 0) + (a['Horas Colheita'] || 0) + (a['Horas Outros'] || 0) + (a['Horas Limp/Prep'] || 0);
-        const totalB = (b['Horas Plantas'] || 0) + (b['Horas Colheita'] || 0) + (b['Horas Outros'] || 0) + (b['Horas Limp/Prep'] || 0);
-        return totalA - totalB;
-    });
+    const entries = buildCultureEntries(filteredItems, opts);
+    sortCultureEntries(entries, opts, e => e.total);
 
-    const labels = filtered.map(d => {
-        const abbr = farmAbbreviations[d.Quinta] || d.Quinta;
-        const startDateStr = d.Inicio || d.Início;
-        const { year } = getCultureWeekAndYear(startDateStr);
-        const yy = year.toString().slice(-2);
-        return `${abbr}-${d.Cultura} (${yy})`;
-    });
-
-    const totals = filtered.map(d => (d['Horas Plantas'] || 0) + (d['Horas Colheita'] || 0) + (d['Horas Outros'] || 0) + (d['Horas Limp/Prep'] || 0));
-    const bestTotal = totals.length > 0 ? Math.min(...totals) : 0;
-
-    const hasMultipleBars = totals.length > 1;
-
-    const variations = totals.map((total, idx) => {
-        if (!hasMultipleBars) {
-            return { text: '', isBest: false };
-        }
-
-        if (idx === 0 || total === bestTotal) {
-            return { text: '(Melhor)', isBest: true };
-        } else {
-            const diffPct = ((total - bestTotal) / bestTotal) * 100;
-            const sign = diffPct > 0 ? '+' : '';
-            return { text: `${sign}${diffPct.toFixed(0)}%`, isBest: false };
-        }
-    });
+    const labels = entries.map(cultureEntryLabel);
+    const totals = entries.map(e => e.total);
+    const variations = computeCultureVariations(totals, entries, opts);
 
     const summaryContainer = document.getElementById('culture-summary-container');
     if (summaryContainer) {
-        let html = '';
-        const avgSelecao = totals.length > 0 ? (totals.reduce((a, b) => a + b, 0) / totals.length) : null;
+        // A média é sempre calculada sobre as culturas (não muda com os checkboxes)
+        const itemTotals = filteredItems.map(cultureItemTotal);
+        const avgSelecao = itemTotals.length > 0 ? (itemTotals.reduce((a, b) => a + b, 0) / itemTotals.length) : null;
         const valSelecao = avgSelecao !== null ? `${Math.round(avgSelecao)} h/ha/sem` : 'N/A';
-
-        html += `<div class="summary-pill"><span class="lbl">Média</span><span class="val">${valSelecao}</span></div>`;
-
-        summaryContainer.innerHTML = html;
+        summaryContainer.innerHTML = `<div class="summary-pill"><span class="lbl">Média</span><span class="val">${valSelecao}</span></div>`;
     }
 
     cultureChartInstance = new Chart(ctx, {
@@ -3808,33 +3954,33 @@ function updateCultureChart() {
         data: {
             labels: labels,
             datasets: [
-                { 
-                    label: 'Plantas', 
-                    data: filtered.map(d => d['Horas Plantas'] || 0), 
-                    backgroundColor: '#c6e0b4', 
+                {
+                    label: 'Plantas',
+                    data: entries.map(e => e.plantas),
+                    backgroundColor: '#c6e0b4',
                     borderRadius: 0,
-                    borderSkipped: false 
+                    borderSkipped: false
                 },
-                { 
-                    label: 'Colheita', 
-                    data: filtered.map(d => d['Horas Colheita'] || 0), 
-                    backgroundColor: '#ff7575', 
+                {
+                    label: 'Colheita',
+                    data: entries.map(e => e.colheita),
+                    backgroundColor: '#ff7575',
                     borderRadius: 0,
-                    borderSkipped: false 
+                    borderSkipped: false
                 },
-                { 
-                    label: 'Outros', 
-                    data: filtered.map(d => d['Horas Outros'] || 0), 
-                    backgroundColor: '#fff2cc', 
+                {
+                    label: 'Outros',
+                    data: entries.map(e => e.outros),
+                    backgroundColor: '#fff2cc',
                     borderRadius: 0,
-                    borderSkipped: false 
+                    borderSkipped: false
                 },
-                { 
-                    label: 'Limp/Prep', 
-                    data: filtered.map(d => d['Horas Limp/Prep'] || 0), 
-                    backgroundColor: '#f8cbad', 
+                {
+                    label: 'Limp/Prep',
+                    data: entries.map(e => e.limp),
+                    backgroundColor: '#f8cbad',
                     borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
-                    borderSkipped: false 
+                    borderSkipped: false
                 }
             ]
         },
@@ -3844,7 +3990,7 @@ function updateCultureChart() {
             categoryPercentage: 0.8, // Largura total reservada para cada barra no gráfico
             barPercentage: 0.8,      // Reduz a largura visível da barra (ajusta entre 0.4 e 0.7 para ser mais estreita)
             animation: { duration: 1000 },
-            layout: { padding: { top: 35 } },
+            layout: { padding: { top: opts.splitYear ? 58 : 35 } },
             plugins: {
                 legend: {
                     position: 'bottom',
@@ -3865,22 +4011,32 @@ function updateCultureChart() {
                         },
                         footer: function(tooltipItems) {
                             const dataIndex = tooltipItems[0].dataIndex;
-                            const d = filtered[dataIndex];
-                            const startDateStr = d.Inicio || d.Início;
-                            
-                            const hasFim = (d.Fim && d.Fim.trim() !== "");
-                            const semanas = hasFim ? Math.round(getCultureWeeksDuration(startDateStr, d.Fim)) : "Em curso";
-                            const dataFim = hasFim ? d.Fim : "Em curso";
-                            
-                            const kgVal = formatKgM2(d["kg/m²"]);
+                            const e = entries[dataIndex];
 
                             let total = 0;
                             tooltipItems.forEach(item => {
                                 total += item.parsed.y;
                             });
 
-                            const hTonVal = (d["h/ton"] !== null && d["h/ton"] !== undefined && !isNaN(d["h/ton"])) 
-                                            ? `${Math.round(d["h/ton"])}` 
+                            if (e.grouped) {
+                                return [
+                                    `Total: ${Math.round(total)} h/ha/sem`,
+                                    ...groupedTooltipLines(e, opts),
+                                    `h/ton (média): ${e.hton !== null ? Math.round(e.hton) : 'Sem dados'}`
+                                ];
+                            }
+
+                            const d = e.items[0];
+                            const startDateStr = d.Inicio || d.Início;
+
+                            const hasFim = (d.Fim && d.Fim.trim() !== "");
+                            const semanas = hasFim ? Math.round(getCultureWeeksDuration(startDateStr, d.Fim)) : "Em curso";
+                            const dataFim = hasFim ? d.Fim : "Em curso";
+
+                            const kgVal = formatKgM2(d["kg/m²"]);
+
+                            const hTonVal = (d["h/ton"] !== null && d["h/ton"] !== undefined && !isNaN(d["h/ton"]))
+                                            ? `${Math.round(d["h/ton"])}`
                                             : "Sem dados";
 
                             return [
@@ -3918,66 +4074,41 @@ function updateCultureChart() {
                 y: { stacked: true, grid: { color: '#f0ebd9' }, beginAtZero: true, grace: '15%' }
             }
         },
-        plugins: [stackedBarOutlinePlugin]
+        plugins: [stackedBarOutlinePlugin, yearGroupsPlugin]
     });
 
-    cultureChartInstance._filteredCultureData = filtered;
-
-    updateCultureHTonChart();
+    // Usado pelo plugin de contorno (precisa de .Quinta por barra) e pelo plugin de anos
+    cultureChartInstance._filteredCultureData = entries;
+    cultureChartInstance._yearGroups = opts.splitYear ? computeYearGroups(entries) : null;
 }
 
-////////////////GRÁFICO DE BARRAS DE H/TON DA ABA "ATIVIDADES" //////////////////
+////////////////GRÁFICO DE BARRAS DE H/TON DA ABA "CULTURAS" //////////////////
 
 function updateCultureHTonChart() {
     const ctx = document.getElementById('cultureHTonChart').getContext('2d');
     if (cultureHTonChartInstance) cultureHTonChartInstance.destroy();
 
-    let filtered = getFilteredCultureData(false).filter(d => d['h/ton'] !== null && d['h/ton'] !== undefined && !isNaN(d['h/ton']));
+    const opts = getCultureViewOpts('hton');
+    const filteredItems = getFilteredCultureData(false).filter(d => d['h/ton'] !== null && d['h/ton'] !== undefined && !isNaN(d['h/ton']));
 
-    filtered.sort((a, b) => Number(a['h/ton']) - Number(b['h/ton']));
+    const entries = buildCultureEntries(filteredItems, opts);
+    sortCultureEntries(entries, opts, e => e.hton);
 
-    const labels = filtered.map(d => {
-        const abbr = farmAbbreviations[d.Quinta] || d.Quinta;
-        const startDateStr = d.Inicio || d.Início;
-        const { year } = getCultureWeekAndYear(startDateStr);
-        const yy = year.toString().slice(-2);
-        return `${abbr}-${d.Cultura} (${yy})`;
-    });
+    const labels = entries.map(cultureEntryLabel);
+    const dataVals = entries.map(e => e.hton);
+    const bgColors = entries.map(e => farmColors[e.Quinta] || '#cccccc');
+    const borderColors = entries.map(e => farmBorderColors[e.Quinta] || '#666666');
 
-    const dataVals = filtered.map(d => Number(d['h/ton']));
-    const bgColors = filtered.map(d => farmColors[d.Quinta] || '#cccccc');
-    const borderColors = filtered.map(d => farmBorderColors[d.Quinta] || '#666666');
-
-    const bestVal = dataVals.length > 0 ? Math.min(...dataVals) : 0;
-    
-    // Verifica se há mais de 1 barra
-    const hasMultipleBars = dataVals.length > 1;
-
-    const variations = dataVals.map((val) => {
-        // Se houver apenas 1 barra, ignora o cálculo e não mostra "(Melhor)"
-        if (!hasMultipleBars) {
-            return { text: '', isBest: false };
-        }
-
-        if (val === bestVal) {
-            return { text: '(Melhor)', isBest: true };
-        } else {
-            const diffPct = ((val - bestVal) / bestVal) * 100;
-            const sign = diffPct > 0 ? '+' : '';
-            return { text: `${sign}${diffPct.toFixed(0)}%`, isBest: false };
-        }
-    });
+    const variations = computeCultureVariations(dataVals, entries, opts);
 
     // Atualização dos Cards de Resumo de Médias de Horas/Tonelada
     const summaryHTonContainer = document.getElementById('culture-hton-summary-container');
     if (summaryHTonContainer) {
-        let html = '';
-        const avgSelecao = dataVals.length > 0 ? (dataVals.reduce((a, b) => a + b, 0) / dataVals.length) : null;
+        // A média é sempre calculada sobre as culturas (não muda com os checkboxes)
+        const itemVals = filteredItems.map(d => Number(d['h/ton']));
+        const avgSelecao = itemVals.length > 0 ? (itemVals.reduce((a, b) => a + b, 0) / itemVals.length) : null;
         const valSelecao = avgSelecao !== null ? `${Math.round(avgSelecao)} h/ton` : 'N/A';
-
-        html += `<div class="summary-pill"><span class="lbl">Média</span><span class="val">${valSelecao}</span></div>`;
-
-        summaryHTonContainer.innerHTML = html;
+        summaryHTonContainer.innerHTML = `<div class="summary-pill"><span class="lbl">Média</span><span class="val">${valSelecao}</span></div>`;
     }
 
     cultureHTonChartInstance = new Chart(ctx, {
@@ -3997,7 +4128,7 @@ function updateCultureHTonChart() {
             responsive: true,
             maintainAspectRatio: false,
             animation: { duration: 1000 },
-            layout: { padding: { top: 35 } },
+            layout: { padding: { top: opts.splitYear ? 58 : 35 } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -4008,17 +4139,24 @@ function updateCultureHTonChart() {
                         },
                         footer: function(tooltipItems) {
                             const dataIndex = tooltipItems[0].dataIndex;
-                            const d = filtered[dataIndex];
+                            const e = entries[dataIndex];
+
+                            if (e.grouped) {
+                                return [
+                                    `Total: ${Math.round(e.total)} h/ha/sem (2pl/m²)`,
+                                    ...groupedTooltipLines(e, opts)
+                                ];
+                            }
+
+                            const d = e.items[0];
                             const startDateStr = d.Inicio || d.Início;
                             const hasFim = (d.Fim && d.Fim.trim() !== "");
                             const semanas = hasFim ? Math.round(getCultureWeeksDuration(startDateStr, d.Fim)) : "Em curso";
                             const dataFim = hasFim ? d.Fim : "Em curso";
                             const kgVal = formatKgM2(d["kg/m²"]);
 
-                            const totalH = (d['Horas Plantas'] || 0) + (d['Horas Colheita'] || 0) + (d['Horas Outros'] || 0) + (d['Horas Limp/Prep'] || 0);
-
                             return [
-                                `Total: ${Math.round(totalH)} h/ha/sem (2pl/m²)`,
+                                `Total: ${Math.round(cultureItemTotal(d))} h/ha/sem (2pl/m²)`,
                                 `Início: ${startDateStr}`,
                                 `Fim: ${dataFim}`,
                                 `Nº Semanas: ${semanas}`,
@@ -4035,11 +4173,9 @@ function updateCultureHTonChart() {
                     textAlign: 'center',
                     color: '#555555',
                     formatter: function(value, context) {
-                        const idx = context.dataIndex;
-                        const varInfo = variations[idx];
-                        const formattedVal = Math.round(value);
+                        const varInfo = variations[context.dataIndex];
                         const varText = (varInfo && varInfo.text) ? `\n${varInfo.text}` : '';
-                        return `${formattedVal} h${varText}`;
+                        return `${Math.round(value)} h${varText}`;
                     }
                 }
             },
@@ -4047,8 +4183,11 @@ function updateCultureHTonChart() {
                 x: { grid: { display: false }, ticks: { font: { size: 9 } } },
                 y: { grid: { color: '#f0ebd9' }, beginAtZero: true, grace: '15%' }
             }
-        }
+        },
+        plugins: [yearGroupsPlugin]
     });
+
+    cultureHTonChartInstance._yearGroups = opts.splitYear ? computeYearGroups(entries) : null;
 }
 
         window.onload = function () {

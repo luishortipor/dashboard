@@ -786,6 +786,57 @@
     <script>
         Chart.register(ChartDataLabels);
 
+        // Separação visual por ano: título do ano por cima de cada grupo de barras e linha
+        // tracejada entre anos. Só atua quando recebe options.plugins.yearGroups.years
+        // (um ano por barra, por ordem); sem essa opção não faz nada.
+        const yearGroupsPlugin = {
+            id: 'yearGroups',
+            beforeDatasetsDraw(chart, args, opts) {
+                const years = opts && opts.years;
+                if (!years || years.length === 0) return;
+                const meta = chart.getDatasetMeta(0);
+                const { ctx, chartArea, scales } = chart;
+
+                const groups = [];
+                years.forEach((y, i) => {
+                    const last = groups[groups.length - 1];
+                    if (last && last.year === y) last.end = i;
+                    else groups.push({ year: y, start: i, end: i });
+                });
+
+                const catW = years.length > 1
+                    ? Math.abs(scales.x.getPixelForValue(1) - scales.x.getPixelForValue(0))
+                    : chartArea.width;
+
+                ctx.save();
+                groups.forEach((g, gi) => {
+                    const first = meta.data[g.start];
+                    const last = meta.data[g.end];
+                    if (!first || !last) return;
+                    const left = first.x - catW / 2;
+                    const right = last.x + catW / 2;
+
+                    if (gi > 0) {
+                        ctx.beginPath();
+                        ctx.setLineDash([4, 4]);
+                        ctx.strokeStyle = '#cfc8b8';
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(left, 4);
+                        ctx.lineTo(left, chartArea.bottom);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+
+                    ctx.fillStyle = '#1e3316';
+                    ctx.font = "700 12px 'Inter', sans-serif";
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(String(g.year), (left + right) / 2, 14);
+                });
+                ctx.restore();
+            }
+        };
+
         // Formato português europeu: vírgula como separador decimal (rótulos, tooltips, eixos e cartões)
         Chart.defaults.locale = 'pt-PT';
         function fmtPT(v) {
@@ -1528,7 +1579,7 @@ function fmtKgTooltip(v) {
     return (v === null || v === undefined || String(v).trim() === '' || isNaN(n)) ? v : n.toFixed(2).replace('.', ',');
 }
 
-function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = false, weeksVals = null, inicioVals = null, xTickFontSize = 12) {
+function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = false, weeksVals = null, inicioVals = null, xTickFontSize = 12, yearsArr = null) {
     if(chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
     let fullUnit = '';
@@ -1553,14 +1604,36 @@ function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = fals
         ? (lowerIsBetter ? Math.min(...validVals) : Math.max(...validVals))
         : 0;
 
-    const variations = dataVals.map(v => {
-        if (!v || v === 0) return '';
-        if (validVals.length <= 1) return '';
-        if (v === bestVal) return '(Melhor)';
-        if (!bestVal || bestVal === 0) return '';
-        const diff = ((v - bestVal) / bestVal) * 100;
-        return isFinite(diff) ? `${diff > 0 ? '+' : ''}${diff.toFixed(0)}%` : '';
-    });
+    let variations;
+    if (yearsArr) {
+        // Com "Separar por ano": o melhor é calculado dentro de cada ano
+        const bestByYear = {}, countByYear = {};
+        dataVals.forEach((v, i) => {
+            if (typeof v === 'number' && v > 0) {
+                const k = yearsArr[i];
+                countByYear[k] = (countByYear[k] || 0) + 1;
+                if (bestByYear[k] === undefined || (lowerIsBetter ? v < bestByYear[k] : v > bestByYear[k])) bestByYear[k] = v;
+            }
+        });
+        variations = dataVals.map((v, i) => {
+            if (!v || v === 0) return '';
+            const k = yearsArr[i];
+            if (countByYear[k] <= 1) return '';
+            if (v === bestByYear[k]) return '(Melhor)';
+            if (!bestByYear[k]) return '';
+            const diff = ((v - bestByYear[k]) / bestByYear[k]) * 100;
+            return isFinite(diff) ? `${diff > 0 ? '+' : ''}${diff.toFixed(0)}%` : '';
+        });
+    } else {
+        variations = dataVals.map(v => {
+            if (!v || v === 0) return '';
+            if (validVals.length <= 1) return '';
+            if (v === bestVal) return '(Melhor)';
+            if (!bestVal || bestVal === 0) return '';
+            const diff = ((v - bestVal) / bestVal) * 100;
+            return isFinite(diff) ? `${diff > 0 ? '+' : ''}${diff.toFixed(0)}%` : '';
+        });
+    }
 
     const hasWeeks = weeksVals !== null && weeksVals !== undefined;
 
@@ -1674,9 +1747,12 @@ function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = fals
         };
     }
 
+    if (yearsArr) pluginsConfig.yearGroups = { years: yearsArr };
+
     const ctx = document.getElementById(canvasId).getContext('2d');
     chartInstances[canvasId] = new Chart(ctx, {
         type: 'bar',
+        plugins: yearsArr ? [yearGroupsPlugin] : [],
         data: {
             labels: labels,
             datasets: [{
@@ -1709,7 +1785,7 @@ function renderBarChart(canvasId, labels, dataVals, colors, lowerIsBetter = fals
     }
 },
             layout: {
-                padding: { top: 30 }
+                padding: { top: yearsArr ? 52 : 30 }
             },
             plugins: pluginsConfig,
             scales: {
@@ -2137,22 +2213,22 @@ function updateTabCulturas(data) {
 
     // 1. kg/m²/sem
     const c1 = getCulturasList('kg_m2_sem', false);
-    renderBarChart('chartC1', c1.map(d => d.nameLabel), c1.map(d => d.avg), c1.map(d => colors[d.farm] || '#4a7c36'), false, c1.map(d => d.semanas), c1.map(d => d.inicio), fontSizeX);
+    renderBarChart('chartC1', c1.map(d => d.nameLabel), c1.map(d => d.avg), c1.map(d => colors[d.farm] || '#4a7c36'), false, c1.map(d => d.semanas), c1.map(d => d.inicio), fontSizeX, isSepAnos ? c1.map(d => d.ano) : null);
 
     // 2. kg/h de trabalho
     const c2 = getCulturasList('kg_h', false);
-    renderBarChart('chartC2', c2.map(d => d.nameLabel), c2.map(d => d.avg), c2.map(d => colors[d.farm] || '#4a7c36'), false, c2.map(d => d.semanas), c2.map(d => d.inicio), fontSizeX);
+    renderBarChart('chartC2', c2.map(d => d.nameLabel), c2.map(d => d.avg), c2.map(d => colors[d.farm] || '#4a7c36'), false, c2.map(d => d.semanas), c2.map(d => d.inicio), fontSizeX, isSepAnos ? c2.map(d => d.ano) : null);
 
     // 3. h/ha/sem: Filtra culturas com kg/m² totais >= minKgM2
     const c3 = getCulturasList(getHhaKey(), true, true, (d, sem) => (d.kg_m2_totais || 0) >= minKgM2);
-    renderBarChart('chartC3', c3.map(d => d.nameLabel), c3.map(d => d.avg), c3.map(d => colors[d.farm] || '#4a7c36'), true, c3.map(d => d.semanas), c3.map(d => d.inicio), fontSizeX);
+    renderBarChart('chartC3', c3.map(d => d.nameLabel), c3.map(d => d.avg), c3.map(d => colors[d.farm] || '#4a7c36'), true, c3.map(d => d.semanas), c3.map(d => d.inicio), fontSizeX, isSepAnos ? c3.map(d => d.ano) : null);
 
     // 4. kg/m²/cultura: Filtra culturas com semanas_duracao <= maxSemanas
     const c4 = getCulturasList('kg_m2_totais', false, false, (d, sem) => {
         if (maxSemanasVal === null) return true;
         return sem <= maxSemanasVal;
     });
-    renderBarChart('chartC4', c4.map(d => d.nameLabel), c4.map(d => d.avg), c4.map(d => colors[d.farm] || '#4a7c36'), false, c4.map(d => d.semanas), c4.map(d => d.inicio), fontSizeX);
+    renderBarChart('chartC4', c4.map(d => d.nameLabel), c4.map(d => d.avg), c4.map(d => colors[d.farm] || '#4a7c36'), false, c4.map(d => d.semanas), c4.map(d => d.inicio), fontSizeX, isSepAnos ? c4.map(d => d.ano) : null);
 }
 
 //////////////GRÁFICO DOS KG/M2/ANO///////////////
@@ -2206,6 +2282,7 @@ function updateTabCulturas(data) {
                 let flatColors = [];
                 let flatBorders = [];
                 let variations = [];
+                let barYears = [];
 
                 filteredYears.forEach(yr => {
                     const yearShort = String(yr).slice(-2);
@@ -2223,6 +2300,7 @@ function updateTabCulturas(data) {
 
                     yearItems.forEach(item => {
                         flatLabels.push(item.label);
+                        barYears.push(yr);
                         flatData.push(item.val);
                         const baseColor = farmColors[item.farm] || '#ccc';
                         const borderColor = farmBorderColors[item.farm] || '#333';
@@ -2246,6 +2324,7 @@ variations.push(varStr);
 
                 chartInstances[canvasId] = new Chart(ctx, {
                     type: 'bar',
+                    plugins: [yearGroupsPlugin],
                     data: {
                         labels: flatLabels,
                         datasets: [{
@@ -2259,6 +2338,7 @@ variations.push(varStr);
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: { padding: { top: 52 } },
                         animations: {
                             numbers: {
                                 type: 'number',
@@ -2268,6 +2348,7 @@ variations.push(varStr);
                             }
                         },
                         plugins: {
+                            yearGroups: { years: barYears },
                             legend: { display: false },
                             tooltip: {
                                 callbacks: {
