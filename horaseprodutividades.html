@@ -12,6 +12,10 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        .line-bar-toggle-left {
+    margin-top: 6px;
+    display: inline-flex; /* Garante que respeita o alinhamento à esquerda e margens */
+}
         :root {
             --bg-main: #f4efe6;
             --sidebar-bg: #2d4a22;
@@ -793,6 +797,19 @@
             line-height: 1.25;
         }
 
+        /* Tamanho do tomate depois do título: mesma fonte e tamanho do subtítulo */
+        .chart-title .title-size-tag {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        .chart-header-row .chart-title .title-size-tag {
+            font-size: 0.7rem;
+            font-size: clamp(0.6rem, 2.5cqw, 0.8rem);
+            line-height: 1.25;
+        }
+
         .chart-header-row .btn-hha-mode {
             font-size: 0.65rem;
             font-size: clamp(0.58rem, 2.6cqw, 0.72rem);
@@ -1072,26 +1089,36 @@
 
             <div class="charts-row">
                 <div class="chart-card">
-                    <div class="chart-header chart-header-row">
-                        <div class="chart-header-text">
-                            <div class="chart-title" id="line-chart-title">Produtividade semanal</div>
-                            <div class="chart-subtitle" id="line-chart-subtitle">Média de produtividade semanal por quinta</div>
-                        </div>
-                        <div id="line-chart-hha-controls" class="chart-hha-controls chart-header-controls" style="display: none;">
-                            <div class="hha-mode-btns">
-                                <button class="btn-hha-mode" data-mode="cultura" onclick="toggleHhaFilter('cultura')">Cultura</button>
-                                <button class="btn-hha-mode" data-mode="fora" onclick="toggleHhaFilter('fora')">Fora da Cultura</button>
-                                <button class="btn-hha-mode" data-mode="embalamento" onclick="toggleHhaFilter('embalamento')">Embalamento</button>
-                            </div>
-                            <label class="hha-bar-toggle">
-                                <input type="checkbox" id="chk-hha-bar" onchange="toggleHhaBarChart()"> Ver como barras
-                            </label>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="lineChart"></canvas>
-                    </div>
-                </div>
+    <div class="chart-header chart-header-row">
+        <div class="chart-header-text">
+            <div class="chart-title" id="line-chart-title">Produtividade semanal</div>
+            <div class="chart-subtitle" id="line-chart-subtitle">Média de produtividade semanal por quinta</div>
+            
+            <!-- COLOCA O CHECKBOX AQUI (por baixo do subtítulo, alinhado à esquerda) -->
+            <label class="hha-bar-toggle line-bar-toggle-left" id="line-chart-bar-toggle-container" style="display: none;">
+                <input type="checkbox" id="chk-hha-bar" onchange="toggleHhaBarChart()"> Ver como barras
+            </label>
+        </div>
+        
+        <div id="line-chart-hha-controls" class="chart-hha-controls chart-header-controls" style="display: none;">
+            <div class="hha-mode-btns">
+                <button class="btn-hha-mode" data-mode="cultura" onclick="toggleHhaFilter('cultura')">Cultura</button>
+                <button class="btn-hha-mode" data-mode="fora" onclick="toggleHhaFilter('fora')">Fora da Cultura</button>
+                <button class="btn-hha-mode" data-mode="embalamento" onclick="toggleHhaFilter('embalamento')">Embalamento</button>
+            </div>
+            <!-- Remove daqui o checkbox "Ver como barras" que estava anteriormente -->
+            <label class="hha-bar-toggle">
+                <input type="checkbox" id="chk-c2-grande-line" onchange="toggleCultura2pl('Grande', this.checked)"> Cultura (Grande 2pl/m²)
+            </label>
+            <label class="hha-bar-toggle">
+                <input type="checkbox" id="chk-c2-mini-line" onchange="toggleCultura2pl('Mini', this.checked)"> Cultura (Mini 2pl/m²)
+            </label>
+        </div>
+    </div>
+    <div class="chart-container">
+        <canvas id="lineChart"></canvas>
+    </div>
+</div>
 
                 <div class="chart-card">
                     <div class="chart-header chart-header-row">
@@ -1163,7 +1190,7 @@
             <div class="chart-card">
                 <div class="chart-header chart-header-row">
                     <div class="chart-header-text">
-                        <div class="chart-title">Horas/ha/semana (2pl/m²)</div>
+                        <div class="chart-title" id="culture-hha-title">Horas/ha/semana (2pl/m²) <span class="title-size-tag">(Tomate Grande+Mini)</span></div>
                         <div class="chart-subtitle" style="margin-bottom: 0;">Horas gastas em plantas, colheita, outros e limp/prep<br>(ajustado a 2 pl/m²)</div>
                     </div>
                     <div class="chart-header-controls">
@@ -1187,7 +1214,7 @@
             <div class="chart-card">
                 <div class="chart-header chart-header-row">
                     <div class="chart-header-text">
-                        <div class="chart-title">Horas/tonelada</div>
+                        <div class="chart-title" id="culture-hton-title">Horas/tonelada <span class="title-size-tag">(Tomate Grande+Mini)</span></div>
                         <div class="chart-subtitle">Horas trabalhadas por tonelada produzida</div>
                     </div>
                     <div class="chart-header-controls">
@@ -1611,6 +1638,21 @@ const farmBorderColors = {
         function getActivityUnit(act) { return activityUnits[act] || ''; }
         function isLowerBetter(act) { return isHhaActivity(act); }
 
+        // Prefixo dos títulos dos gráficos da aba Culturas conforme o tamanho selecionado
+        function updateCultureChartTitles() {
+            // O texto escrito na caixa de pesquisa tem prioridade sobre o tamanho selecionado
+            const q = (document.getElementById('culture-text-filter')?.value || '').trim();
+            const sizeTxt = q ? `(Tomate ${q})`
+                          : selectedCultureSize === 'Grande' ? '(Tomate Grande)'
+                          : selectedCultureSize === 'Mini' ? '(Tomate Mini)'
+                          : '(Tomate Grande+Mini)';
+            const safeTxt = sizeTxt.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const t1 = document.getElementById('culture-hha-title');
+            const t2 = document.getElementById('culture-hton-title');
+            if (t1) t1.innerHTML = `Horas/ha/semana (2pl/m²) <span class="title-size-tag">${safeTxt}</span>`;
+            if (t2) t2.innerHTML = `Horas/tonelada <span class="title-size-tag">${safeTxt}</span>`;
+        }
+
         function selectCultureSize(size, btn) {
             selectedCultureSize = size;
             const container = document.getElementById('culture-size-btns');
@@ -2014,17 +2056,20 @@ if (yearsFilterTitle) {
         function updateHhaModeButtons() {
             document.querySelectorAll('.btn-hha-mode').forEach(b => {
                 const mode = b.dataset.mode;
-                // No gráfico de barras, com "Cultura (Grande/Mini 2pl/m²)" ativo, os filtros
-                // Cultura / Fora da Cultura / Embalamento não se aplicam e ficam desativados.
-                const inBarChart = !!b.closest('#bar-chart-hha-controls');
-                const c2Here = inBarChart && !!hhaCultura2pl;
+                // Com "Cultura (Grande/Mini 2pl/m²)" ativo (nos dois gráficos, o estado é partilhado),
+                // os filtros Cultura / Fora da Cultura / Embalamento não se aplicam e ficam desativados.
+                const c2Here = !!hhaCultura2pl;
                 b.classList.toggle('active', !c2Here && hhaSelection[mode] === true);
                 b.disabled = c2Here;
             });
-            const g = document.getElementById('chk-c2-grande');
-            const m = document.getElementById('chk-c2-mini');
-            if (g) g.checked = (hhaCultura2pl === 'Grande');
-            if (m) m.checked = (hhaCultura2pl === 'Mini');
+            ['chk-c2-grande', 'chk-c2-grande-line'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = (hhaCultura2pl === 'Grande');
+            });
+            ['chk-c2-mini', 'chk-c2-mini-line'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = (hhaCultura2pl === 'Mini');
+            });
         }
 
         // Checkboxes do gráfico de barras: Grande e Mini são exclusivas entre si.
@@ -2034,25 +2079,51 @@ if (yearsFilterTitle) {
             updateDashboard();
         }
 
+        // Semanas que se pode recuar para "emprestar" valores ajustados a 2pl/m² de culturas anteriores
+        const C2_LOOKBACK_WEEKS = 30;
+
+        // Ano/semana ISO de uma data
+        function isoYearWeek(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return { year: d.getUTCFullYear(), week: Math.ceil((((d - yearStart) / 86400000) + 1) / 7) };
+        }
+
+        // Conjunto de chaves "ano-semana" entre duas datas (inclusive)
+        function cultureCoverageKeys(startDate, endDate) {
+            const keys = new Set();
+            const ok = dt => dt instanceof Date && !isNaN(dt);
+            if (!ok(startDate)) return keys;
+            const add = dt => { const k = isoYearWeek(dt); keys.add(`${k.year}-${k.week}`); };
+            if (!ok(endDate) || endDate < startDate) { add(startDate); return keys; }
+            const cur = new Date(startDate);
+            while (cur <= endDate) { add(cur); cur.setDate(cur.getDate() + 7); }
+            add(endDate);
+            return keys;
+        }
+
+        // Removida a constante C2_LOOKBACK_WEEKS
+
         // ---------- Cultura (2pl/m²): total h/sem dos cards da aba Culturas ----------
-        // Usa exatamente os mesmos filtros e a mesma soma (Plantas + Colheita + Outros + Limp/Prep)
-        // do bloco "h/ha/sem (2pl/m²) > Total" dos cards da aba Culturas.
-        function getCultura2plItems() {
-            // O filtro de tamanho da aba Culturas é ignorado aqui: Grande e Mini são sempre separados.
+        function getCultura2plItems(ignorePeriod = false) {
             const savedSize = selectedCultureSize;
             selectedCultureSize = 'Todas';
             let filtered;
-            // Na aba Atividades contam sempre todas as culturas (Finalizadas e Em curso),
-            // independentemente dos checkboxes da aba Culturas (que não são alterados).
-            try { filtered = getFilteredCultureData(true); }
+            try { filtered = getFilteredCultureData(true, ignorePeriod); }
             finally { selectedCultureSize = savedSize; }
             return filtered.map(item => {
                 const { year, week } = getCultureWeekAndYear(item.Inicio || item.Início);
+                const fimStr = (item.Fim && String(item.Fim).trim() !== '') ? item.Fim : null;
+                const startDate = parseDate(item.Inicio || item.Início);
+                const endDate = fimStr ? parseDate(fimStr) : new Date();
                 return {
                     farm: item.Quinta,
                     tipo: item.Tipo,
                     year: year,
                     week: week,
+                    // Semanas ativas estritamente entre a data de início e fim (sem extensão de 30 semanas)
+                    keys: cultureCoverageKeys(startDate, endDate),
                     total: (item['Horas Plantas'] || 0) + (item['Horas Colheita'] || 0) +
                            (item['Horas Outros'] || 0) + (item['Horas Limp/Prep'] || 0)
                 };
@@ -2110,7 +2181,7 @@ if (yearsFilterTitle) {
             // Quando a atividade é h/ha/semana mas o filtro ativo é "Embalamento",
             // as horas não são por hectare, por isso o título mostra "h/semana".
             const c2Active = isHhaActivity(selectedActivity) && !!hhaCultura2pl;
-            const activityLabel = (isHhaActivity(selectedActivity) && hhaViewMode === 'embalamento')
+            const activityLabel = (isHhaActivity(selectedActivity) && hhaViewMode === 'embalamento' && !hhaCultura2pl)
                 ? 'h/semana'
                 : selectedActivity;
             
@@ -2127,6 +2198,9 @@ if (yearsFilterTitle) {
 }
 
             if (c2Active) {
+                document.getElementById('line-chart-subtitle').innerText = homologComparison
+                    ? `Média semanal de horas na cultura ajustadas a 2pl/m², por quinta e ano`
+                    : `Média semanal de horas na cultura ajustadas a 2pl/m², por quinta`;
                 document.getElementById('bar-chart-subtitle').innerText = homologComparison
                     ? 'Média de horas nas culturas ajustadas a 2pl/m², por quinta e ano'
                     : 'Média de horas nas culturas ajustadas a 2pl/m², por quinta';
@@ -2323,8 +2397,15 @@ function adjustColor(color, percent) {
     if (lineChartInstance) lineChartInstance.destroy();
 
     const isHha = isHhaActivity(selectedActivity);
+    const viewMode = (isHha && hhaCultura2pl) ? 'cultura' : hhaViewMode;
+    
     const hhaControls = document.getElementById('line-chart-hha-controls');
     if (hhaControls) hhaControls.style.display = isHha ? 'flex' : 'none';
+
+    // ADICIONA ESTA LINHA PARA MOSTRAR/ESCONDER O CHECKBOX ALINHADO À ESQUERDA:
+    const barToggleLeft = document.getElementById('line-chart-bar-toggle-container');
+    if (barToggleLeft) barToggleLeft.style.display = isHha ? 'flex' : 'none';
+
     if (isHha) updateHhaModeButtons();
     const useBar = isHha && hhaAsBarChart;
 
@@ -2356,7 +2437,42 @@ function adjustColor(color, percent) {
             return rows.reduce((acc, r) => acc + r[farm], 0) / rows.length;
         });
 
-        const recordLookup = (farm, yr, cultVals, foraVals, embalVals) => {
+        // Ajuste a 2pl/m²: não há dados semanais ajustados, por isso as h/ha/sem reais da Cultura são
+        // multiplicadas por um fator = (média das horas ajustadas a 2pl/m² das culturas do tipo) /
+        // (média das h/ha/sem reais da Cultura nas semanas a que se aplica).
+        // O ajuste aplica-se às semanas com culturas desse tipo ativas e, se não houver, às semanas até
+        // 30 semanas depois do fim de uma cultura (usa os valores dessa cultura). Se nas 30 semanas
+        // anteriores não houver culturas, a semana fica sem valores.
+        const c2Items = hhaCultura2pl ? getCultura2plItems(true).filter(i => i.tipo === hhaCultura2pl) : null;
+        const meanOf = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+        const c2Build = (farm, yr) => {
+            const validRows = cultData.filter(d => (yr === undefined || d.Ano === yr) &&
+                d[farm] !== null && d[farm] !== undefined && d[farm] !== 0);
+            const rowKeys = new Set(validRows.map(d => `${d.Ano}-${d.Semana}`));
+            if (rowKeys.size === 0) return null;
+
+            const farmItems = c2Items.filter(i => i.farm === farm && [...i.keys].some(k => rowKeys.has(k)));
+            if (!farmItems.length) return null;
+
+            const covered = new Set();   // Apenas semanas com cultura ativa
+            farmItems.forEach(i => {
+                i.keys.forEach(k => covered.add(k));
+            });
+
+            const real = activeWeeks.map(w => {
+                const rows = validRows.filter(d => d.Semana === w && covered.has(`${d.Ano}-${w}`));
+                if (rows.length === 0) return null;
+                return rows.reduce((acc, r) => acc + r[farm], 0) / rows.length;
+            });
+            const realNonNull = real.filter(v => v !== null);
+            if (!realNonNull.length) return null;
+            const realAvg = meanOf(realNonNull);
+            if (!(realAvg > 0)) nos = null; // ou return null
+            return { real, factor: meanOf(farmItems.map(i => i.total)) / realAvg };
+        };
+        const scaleVals = (vals, f) => (f === null) ? vals : vals.map(v => (v === null || v === undefined) ? null : v * f);
+
+        const recordLookup = (farm, yr, cultVals, foraVals, embalVals, scale = null, borrowed = null) => {
             if (!lineChartHhaLookup[farm]) lineChartHhaLookup[farm] = {};
             const bucket = (yr !== undefined)
                 ? (lineChartHhaLookup[farm][yr] || (lineChartHhaLookup[farm][yr] = {}))
@@ -2366,7 +2482,9 @@ function adjustColor(color, percent) {
                 const c = cultVals[i], f = foraVals[i], e = embalVals ? embalVals[i] : null;
                 const total = (c !== null || f !== null) ? (c || 0) + (f || 0) : null;
                 bucket[w] = {
-                    cultura: c, fora: f, total, embalamento: e,
+                    cultura: (c !== null && c !== undefined && scale !== null) ? c * scale : c,
+                    culturaReal: c, c2Factor: scale, c2Borrowed: borrowed ? !!borrowed[i] : false,
+                    fora: f, total, embalamento: e,
                     pctCultura: total ? (c || 0) / total * 100 : null,
                     pctFora: total ? (f || 0) / total * 100 : null
                 };
@@ -2374,21 +2492,25 @@ function adjustColor(color, percent) {
         };
 
         const buildModeVals = (cultVals, foraVals, embalVals) => activeWeeks.map((w, i) => {
-            if (hhaViewMode === 'embalamento') return embalVals ? embalVals[i] : null;
-            if (hhaViewMode === 'cultura') return cultVals[i];
-            if (hhaViewMode === 'fora') return foraVals[i];
+            if (viewMode === 'embalamento') return embalVals ? embalVals[i] : null;
+            if (viewMode === 'cultura') return cultVals[i];
+            if (viewMode === 'fora') return foraVals[i];
             const c = cultVals[i], f = foraVals[i];
             return (c !== null || f !== null) ? (c || 0) + (f || 0) : null;
         });
 
-        const isStacked = (hhaViewMode === 'total');
+        const isStacked = (viewMode === 'total');
 
         if (!homologComparison) {
             orderedFarmsToRender.forEach(farm => {
-                const cultVals = buildValues(cultData, farm);
+                const c2 = hhaCultura2pl ? c2Build(farm) : null;
+                if (hhaCultura2pl && !c2) return; // sem horas ajustadas a 2pl/m² desta quinta no período
+                const factor = c2 ? c2.factor : null;
+                const cultReal = c2 ? c2.real : buildValues(cultData, farm);
+                const cultVals = scaleVals(cultReal, factor);
                 const foraVals = buildValues(foraData, farm);
                 const embalVals = buildValues(embalData, farm);
-                recordLookup(farm, undefined, cultVals, foraVals, embalVals);
+                recordLookup(farm, undefined, cultReal, foraVals, embalVals, factor, c2 ? c2.borrowed : null);
 
                 if (useBar) {
                     const cultHasData = cultVals.some(v => v !== null && v !== undefined);
@@ -2398,7 +2520,7 @@ function adjustColor(color, percent) {
                     // de facto ambas presentes; caso contrário a barra fica sozinha e é arredondada toda.
                     const bothStackedPresent = isStacked && cultHasData && foraHasData;
 
-                    if ((hhaViewMode === 'cultura' || hhaViewMode === 'total') && cultHasData) {
+                    if ((viewMode === 'cultura' || viewMode === 'total') && cultHasData) {
                         datasets.push({
                             label: `${farm} - Cultura`,
                             data: cultVals,
@@ -2413,7 +2535,7 @@ function adjustColor(color, percent) {
                             __seriesType: 'cultura'
                         });
                     }
-                    if ((hhaViewMode === 'fora' || hhaViewMode === 'total') && foraHasData) {
+                    if ((viewMode === 'fora' || viewMode === 'total') && foraHasData) {
                         datasets.push({
                             label: `${farm} - Fora da Cultura`,
                             data: foraVals,
@@ -2428,7 +2550,7 @@ function adjustColor(color, percent) {
                             __seriesType: 'fora'
                         });
                     }
-                    if (hhaViewMode === 'embalamento' && embalHasData) {
+                    if (viewMode === 'embalamento' && embalHasData) {
                         datasets.push({
                             label: `${farm} - Embalamento`,
                             data: embalVals,
@@ -2451,7 +2573,7 @@ function adjustColor(color, percent) {
                         borderWidth: 2.5,
                         fill: false,
                         tension: 0.2,
-                        spanGaps: true,
+                        spanGaps: !hhaCultura2pl,
                         __farm: farm
                     });
                 }
@@ -2464,10 +2586,14 @@ function adjustColor(color, percent) {
                 const baseColor = farmBorderColors[farm] || '#333333';
 
                 sortedYears.forEach((yr, idx) => {
-                    const cultVals = buildValues(cultData, farm, yr);
+                    const c2 = hhaCultura2pl ? c2Build(farm, yr) : null;
+                    if (hhaCultura2pl && !c2) return; // sem horas ajustadas a 2pl/m² desta quinta/ano
+                    const factor = c2 ? c2.factor : null;
+                    const cultReal = c2 ? c2.real : buildValues(cultData, farm, yr);
+                    const cultVals = scaleVals(cultReal, factor);
                     const foraVals = buildValues(foraData, farm, yr);
                     const embalVals = buildValues(embalData, farm, yr);
-                    recordLookup(farm, yr, cultVals, foraVals, embalVals);
+                    recordLookup(farm, yr, cultReal, foraVals, embalVals, factor, c2 ? c2.borrowed : null);
 
                     const shift = colorShifts[idx % colorShifts.length];
                     const yearColor = adjustColor(baseColor, shift);
@@ -2478,7 +2604,7 @@ function adjustColor(color, percent) {
                         const embalHasData = embalVals.some(v => v !== null && v !== undefined);
                         const bothStackedPresent = isStacked && cultHasData && foraHasData;
 
-                        if ((hhaViewMode === 'cultura' || hhaViewMode === 'total') && cultHasData) {
+                        if ((viewMode === 'cultura' || viewMode === 'total') && cultHasData) {
                             datasets.push({
                                 label: `${farm} (${yr}) - Cultura`,
                                 data: cultVals,
@@ -2493,7 +2619,7 @@ function adjustColor(color, percent) {
                                 __seriesType: 'cultura'
                             });
                         }
-                        if ((hhaViewMode === 'fora' || hhaViewMode === 'total') && foraHasData) {
+                        if ((viewMode === 'fora' || viewMode === 'total') && foraHasData) {
                             datasets.push({
                                 label: `${farm} (${yr}) - Fora da Cultura`,
                                 data: foraVals,
@@ -2508,7 +2634,7 @@ function adjustColor(color, percent) {
                                 __seriesType: 'fora'
                             });
                         }
-                        if (hhaViewMode === 'embalamento' && embalHasData) {
+                        if (viewMode === 'embalamento' && embalHasData) {
                             datasets.push({
                                 label: `${farm} (${yr}) - Embalamento`,
                                 data: embalVals,
@@ -2532,12 +2658,12 @@ function adjustColor(color, percent) {
                             pointBorderColor: yearColor,
                             borderDash: [],
                             pointStyle: 'circle',
-                            pointRadius: 0,
+                            pointRadius: hhaCultura2pl ? 2 : 0, // isolado: garante que semanas soltas com valores ajustados ficam visíveis
                             pointHoverRadius: 7,
                             borderWidth: 2,
                             fill: false,
                             tension: 0.2,
-                            spanGaps: true,
+                            spanGaps: !hhaCultura2pl,
                             __farm: farm, __year: yr
                         });
                     }
@@ -2775,7 +2901,7 @@ function adjustColor(color, percent) {
             y: { type: 'number', easing: 'linear', duration: 0 }
         };
 
-    const isStackedMode = useBar && (hhaViewMode === 'total');
+    const isStackedMode = useBar && (viewMode === 'total');
 
     lineChartInstance = new Chart(ctx, {
         type: chartType,
@@ -2828,16 +2954,17 @@ function adjustColor(color, percent) {
             const seriesType = context.dataset.__seriesType; // 'cultura' ou 'fora'
 
             // Ajuste dos seletores de modo
-            const isCulturaMode = (hhaViewMode === 'cultura');
-            const isForaMode = (hhaViewMode === 'fora');
-            const isEmbalamentoMode = (hhaViewMode === 'embalamento');
-            const isTotalMode = (hhaViewMode === 'total' || !hhaViewMode);
+            const isCulturaMode = (viewMode === 'cultura');
+            const isForaMode = (viewMode === 'fora');
+            const isEmbalamentoMode = (viewMode === 'embalamento');
+            const isTotalMode = (viewMode === 'total' || !viewMode);
 
-            // 1. Modo 'cultura': exibe apenas a linha de Cultura
+            // 1. Modo 'cultura': exibe apenas "Cultura" com o valor
             if (isCulturaMode) {
                 if (seriesType && seriesType !== 'cultura') return null;
                 const val = entry ? entry.cultura : context.parsed.y;
-                const pct = (entry && entry.pctCultura !== null) ? ` (${Math.round(entry.pctCultura)}%)` : '';
+                // Oculta a percentagem se o filtro de 2pl/m² estiver ativo
+                const pct = (!hhaCultura2pl && entry && entry.pctCultura !== null) ? ` (${Math.round(entry.pctCultura)}%)` : '';
                 const fmtVal = (val !== null && val !== undefined) ? `${Math.round(val)} ${unit}` : 'sem dados';
                 return `${key} - Cultura: ${fmtVal}${pct}`;
             }
@@ -2885,7 +3012,7 @@ function adjustColor(color, percent) {
         footer: function(tooltipItems) {
             // Em modo 'total' e gráfico de barra empilhada, insere a linha final do Total
             if (!isHha || tooltipItems.length === 0) return undefined;
-            const isTotalMode = (hhaViewMode === 'total' || !hhaViewMode);
+            const isTotalMode = (viewMode === 'total' || !viewMode);
 
             if (isTotalMode && useBar) {
                 const lines = [];
@@ -3493,7 +3620,7 @@ function adjustColor(color, percent) {
             return { year: date.getFullYear(), week: weekNo };
         }
 
-        function getFilteredCultureData(ignoreStatusFilter = false) {
+        function getFilteredCultureData(ignoreStatusFilter = false, ignorePeriod = false) {
             let activeWeeks = [];
             weekRanges.forEach(wr => {
                 if (selectedWeekRanges.includes(wr.label)) {
@@ -3519,9 +3646,13 @@ const searchTerms = rawTextFilter.split(/[, \-/#]+/).filter(Boolean);
 
                 const startDateStr = item.Inicio || item.Início;
                 const { year, week } = getCultureWeekAndYear(startDateStr);
-                if (!selectedYears.includes(year)) return false;
-                if (!inPeriodCulture(item)) return false;
-                if (!activeWeeks.includes(week)) return false;
+                // ignorePeriod: usado no gráfico de linhas ajustado a 2pl/m², que pode recuar até 30 semanas
+                // e por isso precisa também de culturas plantadas antes do período selecionado
+                if (!ignorePeriod) {
+                    if (!selectedYears.includes(year)) return false;
+                    if (!inPeriodCulture(item)) return false;
+                    if (!activeWeeks.includes(week)) return false;
+                }
                 if (selectedCultureSize !== 'Todas' && item.Tipo !== selectedCultureSize) return false;
                 if (searchTerms.length > 0) {
     const cultura = item.Cultura.toLowerCase();
@@ -3949,6 +4080,7 @@ function groupedTooltipLines(e, opts) {
 ////////////////GRÁFICO DE BARRAS DE H/HA DA ABA "CULTURAS" //////////////////
 
 function updateCultureChart() {
+    updateCultureChartTitles();
     renderCultureFarmCards();
     renderCultureHoursChart();
     updateCultureHTonChart();

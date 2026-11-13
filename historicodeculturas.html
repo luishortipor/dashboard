@@ -478,6 +478,13 @@
             margin-bottom: 10px;
         }
 
+        /* Tamanho do tomate depois do título: mesma fonte e tamanho do subtítulo (dashboard das horas) */
+        .chart-box-title .title-size-tag {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
         .chart-container {
             position: relative;
             height: 320px;
@@ -724,7 +731,7 @@
                 <div class="chart-box" style="width: 100%;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
                         <div>
-                            <div class="chart-box-title" style="margin-bottom:2px;">kg/m²/ano</div>
+                            <div class="chart-box-title" id="kgm2ano-title" style="margin-bottom:2px;">kg/m²/ano <span class="title-size-tag">(Tomate Grande+Mini)</span></div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                             <label style="font-size: 13px; font-weight: 600; color: #444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px;">
@@ -1135,6 +1142,32 @@ let rawData = rawDataDefault;
             if (same(types.filter(isMiniType))) return 'Mini';
             if (same(types.filter(t => !isMiniType(t)))) return 'Grande';
             return null;
+        }
+        // Prefixo dos títulos dos gráficos conforme o tamanho em uso (vazio se o filtro "Tipo" for personalizado)
+        function sizeTitlePrefix() {
+            const size = annualSize();
+            if (size === 'Todas') return '(Tomate Grande+Mini)';
+            if (size === 'Grande') return '(Tomate Grande)';
+            if (size === 'Mini') return '(Tomate Mini)';
+            return '';
+        }
+        function escapeHtml(t) {
+            return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        // Escreve o título do gráfico com a etiqueta do tomate depois, no estilo do subtítulo
+        function setSizedTitle(el, text, tag = sizeTitlePrefix()) {
+            if (!el) return;
+            el.innerHTML = tag ? `${text} <span class="title-size-tag">${escapeHtml(tag)}</span>` : text;
+        }
+        // Etiqueta dos gráficos da aba Quintas/Anos/Culturas:
+        // 1) texto escrito na pesquisa (prioridade), 2) tamanho Todas/Grande/Mini,
+        // 3) seleção personalizada de tipos (ex.: "(Tomate Beef+Pêra+Coração)")
+        function chartScopeTag() {
+            const q = (document.getElementById('culture-search')?.value || '').trim();
+            if (q) return `(Tomate ${q})`;
+            if (sizeFromTypes()) return sizeTitlePrefix();
+            const names = getAllTypes().filter(t => selectedTypes.includes(t));
+            return names.length ? `(Tomate ${names.join('+')})` : '';
         }
         // Linhas anuais do tamanho em uso
         function annualRows() {
@@ -2109,10 +2142,11 @@ function updateTabQuintasAnosCulturas(data) {
 
     const titles = document.querySelectorAll('#tab-cultura .chart-box-title');
     if (titles.length >= 4) {
-        titles[0].textContent = 'kg/m²/sem';
-        titles[1].textContent = 'kg/h de trabalho';
-        titles[2].textContent = 'h/ha/sem';
-        titles[3].textContent = 'kg/m²/cultura';
+        const scope = chartScopeTag();
+        setSizedTitle(titles[0], 'kg/m²/sem', scope);
+        setSizedTitle(titles[1], 'kg/h de trabalho', scope);
+        setSizedTitle(titles[2], 'h/ha/sem', scope);
+        setSizedTitle(titles[3], 'kg/m²/cultura', scope);
     }
     updateTabAnosUsingQCharts(data);
 }
@@ -2144,10 +2178,12 @@ function updateTabCulturas(data) {
 
     const titles = document.querySelectorAll('#tab-cultura .chart-box-title');
     if (titles.length >= 4) {
-        titles[0].textContent = `${prefix} kg/m²/sem`;
-        titles[1].textContent = `${prefix} kg/h de trabalho`;
-        titles[2].textContent = `${prefix} h/ha/sem`;
-        titles[3].textContent = `${prefix} kg/m²/cultura`;
+        const mk = t => [prefix, t].filter(Boolean).join(' ');
+        const scope = chartScopeTag();
+        setSizedTitle(titles[0], mk('kg/m²/sem'), scope);
+        setSizedTitle(titles[1], mk('kg/h de trabalho'), scope);
+        setSizedTitle(titles[2], mk('h/ha/sem'), scope);
+        setSizedTitle(titles[3], mk('kg/m²/cultura'), scope);
     }
 
     // Função de extração e filtragem
@@ -2225,6 +2261,8 @@ function updateTabCulturas(data) {
 //////////////GRÁFICO DOS KG/M2/ANO///////////////
 
         function updateTabKgM2Ano() {
+            const kgTitle = document.getElementById('kgm2ano-title');
+            setSizedTitle(kgTitle, 'kg/m²/ano');
             const canvasId = 'chartKgM2Ano';
             const ungrouped = document.getElementById('ungroupYearsToggle').checked;
             const sepQuintas = document.getElementById('chkKgSepararPorQuintas').checked;
